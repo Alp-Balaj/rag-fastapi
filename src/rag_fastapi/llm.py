@@ -7,8 +7,10 @@ import anthropic
 from .store import Hit
 
 SYSTEM_PROMPT = """You answer questions using only the numbered sources provided in the \
-user's message. Cite the sources you rely on inline as [1], [2], etc. If the sources do \
-not contain the answer, say that plainly instead of guessing. Keep answers concise."""
+user's message. The sources are usually excerpts from the user's own notes, so "I" in a \
+source is the user: address them as "you". Cite the sources you rely on inline as [1], \
+[2], etc. If the sources do not contain the answer, say that plainly instead of guessing. \
+Keep answers concise."""
 
 
 class Generator(Protocol):
@@ -17,6 +19,10 @@ class Generator(Protocol):
 
 class RefusalError(RuntimeError):
     pass
+
+
+class GenerationError(RuntimeError):
+    """Claude could not be called: no key, API error, network. The message is user-facing."""
 
 
 def build_prompt(question: str, hits: list[Hit]) -> str:
@@ -35,7 +41,24 @@ class ClaudeGenerator:
         self._effort = effort
 
     def answer(self, question: str, hits: list[Hit]) -> str:
-        response = self._client.beta.messages.create(
+        try:
+            response = self._create(question, hits)
+        except anthropic.APIStatusError as e:
+            raise GenerationError(f"Claude API error ({e.status_code}): {e.message}") from e
+        except anthropic.APIConnectionError as e:
+            raise GenerationError("Could not reach the Claude API. Check your connection.") from e
+        except TypeError as e:
+            if "authentication" not in str(e):
+                raise
+            raise GenerationError(
+                "No Anthropic API key found. Set ANTHROPIC_API_KEY in .env and restart the server."
+            ) from e
+        if response.stop_reason == "refusal":
+            raise RefusalError("Claude declined to answer this question.")
+        return "".join(b.text for b in response.content if b.type == "text").strip()
+
+    def _create(self, question: str, hits: list[Hit]):
+        return self._client.beta.messages.create(
             model=self._model,
             max_tokens=16000,
             system=SYSTEM_PROMPT,
@@ -46,6 +69,3 @@ class ClaudeGenerator:
             fallbacks="default",
             messages=[{"role": "user", "content": build_prompt(question, hits)}],
         )
-        if response.stop_reason == "refusal":
-            raise RefusalError("Claude declined to answer this question.")
-        return "".join(b.text for b in response.content if b.type == "text").strip()

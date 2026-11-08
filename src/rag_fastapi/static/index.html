@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ask your notes</title>
+<style>
+  :root {
+    --bg: #f6f5f1;
+    --surface: #ffffff;
+    --surface-2: #efede7;
+    --text: #1d1c1a;
+    --muted: #6b6860;
+    --faint: #9a968c;
+    --line: #e2dfd7;
+    --accent: #c2410c;
+    --accent-soft: #fbe9df;
+    --on-accent: #ffffff;
+    --mark: #fde68a;
+    --danger: #b91c1c;
+    --danger-soft: #fdecec;
+    --radius: 12px;
+    --shadow: 0 1px 2px rgb(0 0 0 / .04), 0 4px 16px rgb(0 0 0 / .04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151413;
+      --surface: #1e1d1b;
+      --surface-2: #282624;
+      --text: #ecebe7;
+      --muted: #a29f97;
+      --faint: #74716a;
+      --line: #33312e;
+      --accent: #fb923c;
+      --accent-soft: #3a2518;
+      --on-accent: #1d1209;
+      --mark: #5b4a12;
+      --danger: #f87171;
+      --danger-soft: #3b1d1d;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 40px 16px 80px; }
+
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  h1 { margin: 0; font-size: 22px; letter-spacing: -.01em; }
+  h1 span { color: var(--accent); }
+  .status { color: var(--muted); font-size: 13px; display: flex; gap: 10px; align-items: center; }
+  .linkish { background: none; border: 0; padding: 0; font: inherit; color: var(--accent); cursor: pointer; }
+  .linkish:disabled { color: var(--faint); cursor: default; }
+
+  form { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 6px; }
+  .row { display: flex; gap: 6px; }
+  textarea {
+    flex: 1; resize: none; border: 0; outline: none; background: transparent; color: var(--text);
+    font: inherit; font-size: 17px; padding: 10px 10px; min-height: 46px; max-height: 200px;
+  }
+  textarea::placeholder { color: var(--faint); }
+  button.go {
+    align-self: flex-end; border: 0; border-radius: 9px; background: var(--accent); color: var(--on-accent);
+    font: inherit; font-weight: 600; padding: 10px 16px; cursor: pointer; min-width: 76px;
+  }
+  button.go:disabled { opacity: .55; cursor: default; }
+  .controls { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding: 4px 4px 2px; border-top: 1px solid var(--line); margin-top: 4px; }
+  .seg { display: inline-flex; background: var(--surface-2); border-radius: 8px; padding: 2px; }
+  .seg button { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 13px; padding: 5px 10px; border-radius: 6px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
+  .hint { font-size: 12px; color: var(--faint); }
+  label.k { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+  select { font: inherit; font-size: 13px; color: var(--text); background: var(--surface-2); border: 0; border-radius: 6px; padding: 4px 6px; }
+
+  .notice { margin-top: 16px; padding: 12px 14px; border-radius: 10px; font-size: 14px; }
+  .notice.error { background: var(--danger-soft); color: var(--danger); }
+  .notice.info { background: var(--surface-2); color: var(--muted); }
+
+  .answer { margin-top: 22px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow); }
+  .answer > :first-child { margin-top: 0; }
+  .answer > :last-child { margin-bottom: 0; }
+  .answer h2, .answer h3, .answer h4 { font-size: 16px; margin: 1.1em 0 .4em; }
+  .answer ul, .answer ol { padding-left: 1.3em; }
+  .answer code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; font-size: .9em; }
+  a.cite {
+    display: inline-block; min-width: 1.45em; padding: 0 .35em; margin: 0 1px; border-radius: 5px;
+    background: var(--accent-soft); color: var(--accent); font-size: .75em; font-weight: 600;
+    text-align: center; text-decoration: none; vertical-align: .15em; line-height: 1.5;
+  }
+  a.cite:hover { background: var(--accent); color: var(--on-accent); }
+
+  .sources-head { margin: 26px 2px 10px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .source { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; scroll-margin-top: 16px; transition: border-color .2s, box-shadow .2s; }
+  .source.flash { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .source-top { display: flex; gap: 10px; align-items: flex-start; }
+  .num { flex: none; width: 24px; height: 24px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); font-size: 12px; font-weight: 700; display: grid; place-items: center; margin-top: 1px; }
+  .meta { flex: 1; min-width: 0; }
+  .title { font-weight: 600; overflow-wrap: anywhere; }
+  .folder { font-size: 12px; color: var(--faint); overflow-wrap: anywhere; }
+  .score { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .bar { width: 56px; height: 4px; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--accent); }
+  .snippet { margin: 10px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; color: var(--muted); }
+  .snippet.clamped { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+  .snippet mark { background: var(--mark); color: var(--text); border-radius: 2px; padding: 0 1px; }
+  .actions { display: flex; gap: 14px; margin-top: 8px; font-size: 13px; }
+  .actions a { color: var(--accent); text-decoration: none; }
+  .actions a:hover { text-decoration: underline; }
+
+  .loading { margin-top: 22px; color: var(--muted); font-size: 14px; display: flex; align-items: center; gap: 10px; }
+  .spinner { width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } .source { transition: none; } }
+  [hidden] { display: none !important; }
+  kbd { font: 11px ui-monospace, monospace; background: var(--surface-2); border-radius: 4px; padding: 1px 4px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Ask your <span>notes</span></h1>
+    <div class="status">
+      <span id="stats">…</span>
+      <button class="linkish" id="sync" type="button" hidden>Re-sync</button>
+    </div>
+  </header>
+
+  <form id="form" autocomplete="off">
+    <div class="row">
+      <textarea id="q" rows="1" placeholder="What did I write about…" aria-label="Question" autofocus></textarea>
+      <button class="go" id="go" type="submit">Ask</button>
+    </div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Mode">
+        <button type="button" data-mode="ask" aria-pressed="true">Ask Claude</button>
+        <button type="button" data-mode="search" aria-pressed="false">Search only</button>
+      </div>
+      <span class="hint" id="hint"></span>
+      <label class="k">Sources
+        <select id="k"><option>4</option><option selected>6</option><option>8</option><option>12</option></select>
+      </label>
+    </div>
+  </form>
+
+  <div id="notice" class="notice" hidden></div>
+  <div id="loading" class="loading" hidden><div class="spinner"></div><span id="loading-text"></span></div>
+  <div id="answer" class="answer" hidden></div>
+  <div id="sources-head" class="sources-head" hidden></div>
+  <div id="sources"></div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+
+let mode = store.get("mode", "ask");
+$("k").value = store.get("k", "6");
+const HINTS = {
+  ask: "Sends the matching passages to Claude",
+  search: "Stays on this machine · free · instant",
+};
+
+function setMode(m) {
+  mode = m;
+  store.set("mode", m);
+  document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === m));
+  $("go").textContent = m === "ask" ? "Ask" : "Search";
+  $("hint").textContent = HINTS[m];
+}
+document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => { setMode(b.dataset.mode); $("q").focus(); }));
+setMode(mode);
+$("k").addEventListener("change", () => store.set("k", $("k").value));
+
+// Grow the textarea with its content; Enter submits, Shift+Enter makes a new line.
+const q = $("q");
+q.addEventListener("input", () => { q.style.height = "auto"; q.style.height = q.scrollHeight + "px"; });
+q.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("form").requestSubmit(); } });
+document.addEventListener("keydown", e => {
+  if (e.key === "/" && document.activeElement !== q) { e.preventDefault(); q.focus(); }
+});
+
+$("form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const question = q.value.trim();
+  if (!question) return;
+  const k = Number($("k").value);
+  // Keep the question in the URL, so a search can be bookmarked or shared as a link.
+  history.replaceState(null, "", `?${new URLSearchParams({ q: question, mode })}`);
+  busy(true, mode === "ask" ? "Finding passages and asking Claude…" : "Searching…");
+  clearResults();
+  try {
+    if (mode === "ask") {
+      const data = await api("/ask", { question, k });
+      renderAnswer(data.answer);
+      renderSources(data.sources, question, "Sources");
+    } else {
+      const data = await api("/search", { question, k });
+      renderSources(data, question, data.length ? "Closest passages" : "");
+      if (!data.length) notice("The index is empty. Set RAG_NOTES_DIR and press Re-sync.", "info");
+    }
+  } catch (err) {
+    notice(err.message, "error");
+  } finally {
+    busy(false);
+  }
+});
+
+async function api(path, body) {
+  const res = await fetch(path, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    let msg = `${res.status} ${res.statusText}`;
+    try { const j = await res.json(); if (j.detail) msg = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail); } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+function busy(on, text = "") {
+  $("go").disabled = on;
+  $("loading").hidden = !on;
+  $("loading-text").textContent = text;
+}
+function clearResults() {
+  $("notice").hidden = true;
+  $("answer").hidden = true;
+  $("sources-head").hidden = true;
+  $("sources").replaceChildren();
+}
+function notice(msg, kind) {
+  const n = $("notice");
+  n.className = `notice ${kind}`;
+  n.textContent = msg;
+  n.hidden = false;
+}
+
+// --- rendering -------------------------------------------------------------
+
+const esc = s => s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function inline(s) {
+  return esc(s)
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[^*\w])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>")
+    .replace(/\[(\d+(?:\s*,\s*\d+)*)\]/g, (_, nums) =>
+      nums.split(",").map(n => n.trim()).map(n => `<a class="cite" href="#src-${n}" data-n="${n}">${n}</a>`).join(""));
+}
+
+// Just enough Markdown for Claude's answers: headings, lists, bold/italic, code, paragraphs.
+function markdown(src) {
+  const out = [];
+  let para = [], list = null;
+  const flushPara = () => { if (para.length) { out.push(`<p>${para.map(inline).join("<br>")}</p>`); para = []; } };
+  const flushList = () => { if (list) { out.push(`<${list.tag}>${list.items.map(i => `<li>${inline(i)}</li>`).join("")}</${list.tag}>`); list = null; } };
+  for (const line of src.split("\n")) {
+    const ul = line.match(/^\s*[-*•]\s+(.*)/), ol = line.match(/^\s*\d+[.)]\s+(.*)/), h = line.match(/^(#{1,6})\s+(.*)/);
+    if (ul || ol) {
+      flushPara();
+      const tag = ul ? "ul" : "ol";
+      if (list && list.tag !== tag) flushList();
+      list ??= { tag, items: [] };
+      list.items.push((ul || ol)[1]);
+    } else if (h) {
+      flushPara(); flushList();
+      const level = Math.min(h[1].length + 1, 4);
+      out.push(`<h${level}>${inline(h[2])}</h${level}>`);
+    } else if (!line.trim()) {
+      flushPara(); flushList();
+    } else if (list && /^\s{2,}\S/.test(line)) {
+      list.items[list.items.length - 1] += " " + line.trim();
+    } else {
+      flushList();
+      para.push(line);
+    }
+  }
+  flushPara(); flushList();
+  return out.join("");
+}
+
+function renderAnswer(text) {
+  const el = $("answer");
+  el.innerHTML = markdown(text);
+  el.hidden = false;
+}
+
+const STOP = new Set("about above after again also and any are because been before being between both but can could did does doing down during each few for from further had has have having her here hers him his how into its just more most myself not now off once only other our out over own same she should some such than that the their them then there these they this those through too under until very was were what when where which while who whom why will with would you your".split(" "));
+
+function highlighter(question) {
+  const words = [...new Set(question.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) || [])].filter(w => !STOP.has(w));
+  if (!words.length) return esc;
+  const re = new RegExp(`(${words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "giu");
+  return s => esc(s).replace(re, "<mark>$1</mark>");
+}
+
+function renderSources(sources, question, heading) {
+  if (!sources.length) return;
+  const head = $("sources-head");
+  head.textContent = heading;
+  head.hidden = !heading;
+  const hl = highlighter(question);
+  // Bars show how the results compare with each other: scaled over the shown range, not 0..1.
+  const scores = sources.map(s => s.score);
+  const top = Math.max(...scores), floor = Math.min(...scores) - 0.05;
+  const frag = document.createDocumentFragment();
+  for (const s of sources) {
+    const card = document.createElement("article");
+    card.className = "source";
+    card.id = `src-${s.index}`;
+    const pct = Math.max(6, Math.round(((s.score - floor) / (top - floor || 1)) * 100));
+    card.innerHTML = `
+      <div class="source-top">
+        <div class="num">${s.index}</div>
+        <div class="meta">
+          <div class="title">${esc(s.title)}</div>
+          ${s.folder ? `<div class="folder">${esc(s.folder)}</div>` : ""}
+        </div>
+        <div class="score" title="Cosine similarity to your question">${s.score.toFixed(2)}<div class="bar"><i style="width:${pct}%"></i></div></div>
+      </div>
+      <p class="snippet clamped">${hl(s.text)}</p>
+      <div class="actions">
+        <a href="#" class="toggle" hidden>Show more</a>
+        ${s.link ? `<a href="${esc(s.link)}">Open in Obsidian</a>` : ""}
+      </div>`;
+    frag.append(card);
+  }
+  $("sources").append(frag);
+  // Only offer "Show more" where the snippet is actually cut off.
+  requestAnimationFrame(() => document.querySelectorAll(".source").forEach(card => {
+    const snip = card.querySelector(".snippet"), toggle = card.querySelector(".toggle");
+    if (snip.scrollHeight > snip.clientHeight + 2) toggle.hidden = false;
+    toggle.addEventListener("click", e => {
+      e.preventDefault();
+      const clamped = snip.classList.toggle("clamped");
+      toggle.textContent = clamped ? "Show more" : "Show less";
+    });
+  }));
+}
+
+// Clicking a [n] citation scrolls to and briefly highlights its source.
+document.addEventListener("click", e => {
+  const a = e.target.closest("a.cite");
+  if (!a) return;
+  e.preventDefault();
+  const card = $(`src-${a.dataset.n}`);
+  if (!card) return;
+  card.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  card.classList.add("flash");
+  setTimeout(() => card.classList.remove("flash"), 1400);
+});
+
+// --- status and re-sync ----------------------------------------------------
+
+const fmt = n => n.toLocaleString();
+
+async function loadStatus() {
+  try {
+    const h = await (await fetch("/health")).json();
+    $("stats").textContent = `${fmt(h.documents)} notes · ${fmt(h.chunks)} chunks`;
+    $("sync").hidden = !h.notes_dir;
+    $("sync").title = h.notes_dir ? `Re-index changed notes in ${h.notes_dir}` : "";
+  } catch {
+    $("stats").textContent = "Server unreachable";
+  }
+}
+
+$("sync").addEventListener("click", async () => {
+  const btn = $("sync");
+  btn.disabled = true;
+  btn.textContent = "Syncing…";
+  try {
+    const r = await api("/sync");
+    const changed = r.added + r.updated + r.removed;
+    let msg = changed
+      ? `Synced: ${r.added} added, ${r.updated} updated, ${r.removed} removed (${fmt(r.unchanged)} unchanged).`
+      : `Already up to date (${fmt(r.unchanged)} notes).`;
+    if (r.skipped.length) msg += ` Skipped ${r.skipped.length} unreadable file(s): ${r.skipped.join("; ")}`;
+    notice(msg, "info");
+    await loadStatus();
+  } catch (err) {
+    notice(err.message, "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Re-sync";
+  }
+});
+
+loadStatus();
+
+// ?q=...&mode=search runs a question on load (bookmarks, browser search-engine shortcuts).
+const params = new URLSearchParams(location.search);
+if (params.get("mode") in HINTS) setMode(params.get("mode"));
+if (params.get("q")) {
+  q.value = params.get("q");
+  q.dispatchEvent(new Event("input"));
+  $("form").requestSubmit();
+}
+</script>
+</body>
+</html>
