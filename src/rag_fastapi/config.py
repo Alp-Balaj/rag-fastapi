@@ -2,7 +2,13 @@
 
 from pathlib import Path
 
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Settings below only reads RAG_* variables from .env. Load the whole file into
+# the environment too, so the Anthropic client finds ANTHROPIC_API_KEY there.
+# Variables already set in the shell win over .env.
+load_dotenv()
 
 
 class Settings(BaseSettings):

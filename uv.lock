@@ -1566,6 +1566,7 @@ dependencies = [
     { name = "fastembed" },
     { name = "numpy" },
     { name = "pydantic-settings" },
+    { name = "python-dotenv" },
 ]
 
 [package.dev-dependencies]
@@ -1581,6 +1582,7 @@ requires-dist = [
     { name = "fastembed", specifier = ">=0.9.1" },
     { name = "numpy", specifier = ">=2.5.4" },
     { name = "pydantic-settings", specifier = ">=2.16.2" },
+    { name = "python-dotenv", specifier = ">=1.2.4" },
 ]
 
 [package.metadata.requires-dev]
